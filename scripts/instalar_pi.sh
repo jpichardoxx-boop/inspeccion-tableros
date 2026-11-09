@@ -95,8 +95,11 @@ if command -v raspi-config >/dev/null 2>&1; then
 else
     aviso "raspi-config no encontrado; se edita $BOOT_CFG directamente"
 fi
+# Agrega o reemplaza una línea de config.txt. La clave es todo lo anterior al
+# ÚLTIMO "=" (p. ej. "dtparam=i2c_arm"), para que cada dtparam sea independiente
+# y no se sobrescriban entre sí.
 agregar_boot() {
-    local linea="$1" clave="${1%%=*}"
+    local linea="$1" clave="${1%=*}"
     if grep -qE "^\s*${clave}=" "$BOOT_CFG"; then
         sed -i -E "s|^\s*${clave}=.*|${linea}|" "$BOOT_CFG"
     else
