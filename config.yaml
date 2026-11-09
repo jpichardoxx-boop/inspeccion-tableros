@@ -134,6 +134,8 @@ camara_visible:
   alto: 480
   fps: 12
   calidad_jpeg: 70
+  espejo_horizontal: true        # Voltear en X (la webcam del robot se ve al revés)
+  espejo_vertical: false         # Voltear en Y (con ambos en true = rotar 180°)
 
 # Alineación del térmico sobre el visible (fracción del cuadro visible que
 # cubre el térmico) = FOV térmico / FOV webcam. Webcam típica de 60°x45°:

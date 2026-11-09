@@ -38,7 +38,8 @@ def main():
         try:
             camara = detectar_camara(args.tipo or cv.get("tipo", "usb"),
                                      cv.get("indice_usb", -1) if args.indice is None else args.indice,
-                                     cv.get("ancho", 640), cv.get("alto", 480), cv.get("fps", 12))
+                                     cv.get("ancho", 640), cv.get("alto", 480), cv.get("fps", 12),
+                                     cv.get("espejo_horizontal", False), cv.get("espejo_vertical", False))
         except RuntimeError as e:
             raise SystemExit(f"ERROR: no se encontró ninguna cámara.\n{e}\n"
                              "Pi Camera: revisa el cable plano y ejecuta 'rpicam-hello --list-cameras'.\n"

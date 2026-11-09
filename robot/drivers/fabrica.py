@@ -139,7 +139,8 @@ def crear_reales(cfg: Configuracion) -> ConjuntoDrivers:
     try:
         from .camara_visible import detectar_camara
         visible = detectar_camara(cv.get("tipo", "usb"), cv.get("indice_usb", -1),
-                                  cv.get("ancho", 640), cv.get("alto", 480), cv.get("fps", 12))
+                                  cv.get("ancho", 640), cv.get("alto", 480), cv.get("fps", 12),
+                                  cv.get("espejo_horizontal", False), cv.get("espejo_vertical", False))
     except Exception as ex:
         log.error("Cámara visible no disponible: %s", ex)
         visible = CamaraVisibleNula(str(ex))

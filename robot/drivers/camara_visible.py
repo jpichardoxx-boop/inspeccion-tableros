@@ -108,8 +108,52 @@ def _abrir_usb(indice: int, ancho: int, alto: int, fps: int) -> "CamaraUSB":
     raise RuntimeError("No se encontró ninguna webcam USB (" + "; ".join(errores) + ")")
 
 
+def orientar_cuadro(cuadro: np.ndarray, espejo_horizontal: bool = False,
+                    espejo_vertical: bool = False) -> np.ndarray:
+    """Voltea el cuadro en X (espejo) y/o en Y. Ambos a la vez equivalen a rotar 180°."""
+    if espejo_horizontal and espejo_vertical:
+        return np.ascontiguousarray(cuadro[::-1, ::-1])
+    if espejo_horizontal:
+        return np.ascontiguousarray(cuadro[:, ::-1])
+    if espejo_vertical:
+        return np.ascontiguousarray(cuadro[::-1])
+    return cuadro
+
+
+class CamaraOrientada(DriverCamaraVisible):
+    """Envuelve otra cámara y voltea sus cuadros según la configuración."""
+
+    def __init__(self, camara: DriverCamaraVisible, espejo_horizontal: bool = False,
+                 espejo_vertical: bool = False):
+        self._camara = camara
+        self.espejo_horizontal = bool(espejo_horizontal)
+        self.espejo_vertical = bool(espejo_vertical)
+        self.nombre = camara.nombre
+        extras = [n for n, v in (("espejo X", self.espejo_horizontal),
+                                 ("espejo Y", self.espejo_vertical)) if v]
+        self.detalle = getattr(camara, "detalle", "") + (f" ({', '.join(extras)})" if extras else "")
+
+    def leer_cuadro(self) -> np.ndarray | None:
+        cuadro = self._camara.leer_cuadro()
+        if cuadro is None:
+            return None
+        return orientar_cuadro(cuadro, self.espejo_horizontal, self.espejo_vertical)
+
+    def cerrar(self) -> None:
+        self._camara.cerrar()
+
+
 def detectar_camara(tipo: str = "usb", indice_usb: int = -1, ancho: int = 640,
-                    alto: int = 480, fps: int = 12) -> DriverCamaraVisible:
+                    alto: int = 480, fps: int = 12, espejo_horizontal: bool = False,
+                    espejo_vertical: bool = False) -> DriverCamaraVisible:
+    """Crea la cámara indicada y aplica el volteo configurado."""
+    camara = _crear_camara(tipo, indice_usb, ancho, alto, fps)
+    if espejo_horizontal or espejo_vertical:
+        return CamaraOrientada(camara, espejo_horizontal, espejo_vertical)
+    return camara
+
+
+def _crear_camara(tipo: str, indice_usb: int, ancho: int, alto: int, fps: int) -> DriverCamaraVisible:
     """Crea la cámara indicada; con ``auto`` prueba la webcam USB y luego la Pi Camera."""
     errores = []
     if tipo in ("auto", "usb"):
