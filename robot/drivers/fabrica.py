@@ -125,8 +125,8 @@ def crear_reales(cfg: Configuracion) -> ConjuntoDrivers:
     if ct.get("habilitada", True):
         try:
             from .mlx90640 import CamaraMLX90640
-            termica = CamaraMLX90640(ct.get("frecuencia_hz", 4), ct.get("i2c_frecuencia_hz", 400000),
-                                     ct.get("rotar_180", False), ct.get("espejo_horizontal", False))
+            # El volteo (rotar_180 / espejos) lo aplica Robot en vivo, no el driver
+            termica = CamaraMLX90640(ct.get("frecuencia_hz", 4), ct.get("i2c_frecuencia_hz", 400000))
         except Exception as ex:
             log.error("MLX90640 no disponible: %s", ex)
             termica = CamaraTermicaNula(str(ex))
@@ -138,9 +138,9 @@ def crear_reales(cfg: Configuracion) -> ConjuntoDrivers:
     visible: DriverCamaraVisible
     try:
         from .camara_visible import detectar_camara
+        # El volteo en X / Y lo aplica Robot en vivo (se puede cambiar desde la interfaz)
         visible = detectar_camara(cv.get("tipo", "usb"), cv.get("indice_usb", -1),
-                                  cv.get("ancho", 640), cv.get("alto", 480), cv.get("fps", 12),
-                                  cv.get("espejo_horizontal", False), cv.get("espejo_vertical", False))
+                                  cv.get("ancho", 640), cv.get("alto", 480), cv.get("fps", 12))
     except Exception as ex:
         log.error("Cámara visible no disponible: %s", ex)
         visible = CamaraVisibleNula(str(ex))

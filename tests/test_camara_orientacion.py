@@ -54,3 +54,42 @@ def test_camara_orientada_envuelve_y_cierra():
     assert "espejo X" in cam.detalle
     cam.cerrar()
     assert base.cerrada
+
+
+# --- Orientación configurable desde la interfaz ------------------------------
+
+def test_orientacion_termica_combina_rotar_180():
+    from robot.logica.robot import orientacion_termica
+
+    assert orientacion_termica({}) == (False, False)
+    assert orientacion_termica({"espejo_vertical": True}) == (False, True)
+    assert orientacion_termica({"rotar_180": True}) == (True, True)
+    # rotar 180° + espejo X = solo espejo Y
+    assert orientacion_termica({"rotar_180": True, "espejo_horizontal": True}) == (False, True)
+
+
+def test_volteo_editable_desde_api_y_aplicado_en_vivo(robot_sim):
+    import time
+
+    from robot.web.app import crear_app
+
+    app, _ = crear_app(robot_sim)
+    http = app.test_client()
+    valores = http.get("/api/config").get_json()["valores"]
+    for clave in ("camara_visible.espejo_horizontal", "camara_visible.espejo_vertical",
+                  "camara_termica.espejo_horizontal", "camara_termica.espejo_vertical"):
+        assert clave in valores
+
+    r = http.post("/api/config", json={"camara_termica.espejo_vertical": True,
+                                       "camara_visible.espejo_horizontal": False})
+    assert r.status_code == 200, r.get_json()
+    assert robot_sim.cfg.get("camara_termica.espejo_vertical") is True
+    assert robot_sim.cfg.get("camara_visible.espejo_horizontal") is False
+
+    # La cámara térmica simulada sigue entregando cuadros con el volteo activo
+    robot_sim._matriz = None
+    limite = time.monotonic() + 5
+    while robot_sim.matriz_termica() is None and time.monotonic() < limite:
+        time.sleep(0.05)
+    assert robot_sim.matriz_termica().shape == (24, 32)
+    http.post("/api/config/restablecer")

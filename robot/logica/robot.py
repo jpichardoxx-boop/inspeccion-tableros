@@ -35,6 +35,7 @@ from ..config import Configuracion, modo_simulacion
 from ..datos.db import BaseDatos
 from ..datos.reporte_pdf import generar_reporte
 from ..drivers.control_xbox import ControlXboxEvdev
+from ..drivers.camara_visible import orientar_cuadro
 from ..drivers.esp32_uart import Esp32Uart
 from ..drivers.fabrica import crear_drivers, cuentas_por_vuelta
 from ..drivers.sistema import MonitorSistema
@@ -46,6 +47,17 @@ from .bateria import nivel_alerta, porcentaje_lipo
 from .control import ControladorTraccion, ParametrosTraccion
 
 log = logging.getLogger(__name__)
+
+
+def orientacion_termica(ct: dict) -> tuple[bool, bool]:
+    """(espejo X, espejo Y) efectivos de la cámara térmica.
+
+    ``rotar_180`` equivale a voltear en X y en Y, así que se combina con los
+    espejos elegidos en la interfaz (dos volteos iguales se cancelan).
+    """
+    rotar = bool(ct.get("rotar_180", False))
+    return (bool(ct.get("espejo_horizontal", False)) != rotar,
+            bool(ct.get("espejo_vertical", False)) != rotar)
 
 
 def parametros_desde_config(cfg: Configuracion) -> ParametrosTraccion:
@@ -213,6 +225,7 @@ class Robot:
                 time.sleep(0.05)
                 continue
             ct = self.cfg.seccion("camara_termica")
+            cuadro = orientar_cuadro(cuadro, *orientacion_termica(ct))
             matriz = corregir_emisividad(cuadro, float(ct.get("emisividad", 0.95)),
                                          self.temperatura_reflejada())
             est = estadisticas(matriz)
@@ -268,7 +281,9 @@ class Robot:
                 time.sleep(0.5)
                 continue
             if cuadro is not None:
-                self._nuevo_cuadro(cuadro)
+                cv = self.cfg.seccion("camara_visible")
+                self._nuevo_cuadro(orientar_cuadro(cuadro, bool(cv.get("espejo_horizontal", False)),
+                                                   bool(cv.get("espejo_vertical", False))))
             else:
                 time.sleep(0.05)
 

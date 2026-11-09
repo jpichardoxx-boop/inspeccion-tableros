@@ -53,6 +53,11 @@ EDITABLES: dict[str, tuple] = {
     "reporte.responsable": (str, None, None),
     "reporte.logo": (str, None, None),
     "camara_termica.usar_dht22_como_reflejada": (bool, None, None),
+    # Orientación de las cámaras (se aplica en vivo, sin reiniciar)
+    "camara_visible.espejo_horizontal": (bool, None, None),
+    "camara_visible.espejo_vertical": (bool, None, None),
+    "camara_termica.espejo_horizontal": (bool, None, None),
+    "camara_termica.espejo_vertical": (bool, None, None),
     # Sensores ambientales
     "sensores.mq2.r0_kohm": (float, 0.01, 1000.0),
     "sensores.mq2.advertencia_ppm": (float, 1.0, 100000.0),
