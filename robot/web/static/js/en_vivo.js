@@ -95,6 +95,86 @@
   video.addEventListener("error", () => setTimeout(() => { video.src = "/video.mjpg?t=" + Date.now(); }, 1500));
   Robot.escuchar("conexion", (ok) => { if (ok) video.src = "/video.mjpg?t=" + Date.now(); });
 
+  // ------------------------------------------------------------ Audio de la webcam
+  // /audio.pcm entrega PCM de 16 bits mono sin cabecera; se reproduce con Web Audio
+  // programando cada bloque justo después del anterior (latencia ~0.3 s).
+  const audio = { ctx: null, ganancia: null, abortar: null, siguiente: 0 };
+  const btnAudio = $("btn-audio");
+
+  function volumen() { return Number($("rng-volumen").value) / 100; }
+  $("rng-volumen").addEventListener("input", () => { if (audio.ganancia) audio.ganancia.gain.value = volumen(); });
+
+  function pintarBotonAudio(activo) {
+    btnAudio.textContent = activo ? "🔊 Silenciar" : "🔇 Escuchar";
+    btnAudio.classList.toggle("btn-primario", activo);
+    $("ctl-volumen").hidden = !activo;
+  }
+
+  function detenerAudio() {
+    if (audio.abortar) audio.abortar.abort();
+    if (audio.ctx) audio.ctx.close().catch(() => {});
+    audio.ctx = audio.ganancia = audio.abortar = null;
+    pintarBotonAudio(false);
+  }
+
+  function reproducirBloque(bytes, tasa) {
+    const n = bytes.length >> 1;
+    if (!n) return;
+    const vista = new DataView(bytes.buffer, bytes.byteOffset, n * 2);
+    const buf = audio.ctx.createBuffer(1, n, tasa);
+    const canal = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) canal[i] = vista.getInt16(i * 2, true) / 32768;
+    const fuente = audio.ctx.createBufferSource();
+    fuente.buffer = buf;
+    fuente.connect(audio.ganancia);
+    const ahora = audio.ctx.currentTime;
+    // Si nos atrasamos (o adelantamos de más) se reinicia la cola para no acumular retraso
+    if (audio.siguiente < ahora + 0.05 || audio.siguiente > ahora + 0.8) audio.siguiente = ahora + 0.15;
+    fuente.start(audio.siguiente);
+    audio.siguiente += buf.duration;
+  }
+
+  async function iniciarAudio() {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx || !window.ReadableStream) {
+      Robot.aviso("Este navegador no puede reproducir el audio en vivo.", "error");
+      return;
+    }
+    audio.ctx = new Ctx();
+    audio.ganancia = audio.ctx.createGain();
+    audio.ganancia.gain.value = volumen();
+    audio.ganancia.connect(audio.ctx.destination);
+    audio.siguiente = 0;
+    audio.abortar = new AbortController();
+    pintarBotonAudio(true);
+    const ctxActual = audio.ctx;
+    try {
+      const r = await fetch("/audio.pcm?t=" + Date.now(), { signal: audio.abortar.signal, cache: "no-store" });
+      if (!r.ok) {
+        let msg = "Audio no disponible";
+        try { msg = (await r.json()).error || msg; } catch (_) { /* sin JSON */ }
+        throw new Error(msg);
+      }
+      const tasa = Number(r.headers.get("X-Audio-Tasa")) || 16000;
+      const lector = r.body.getReader();
+      let resto = null;  // byte suelto si un bloque llega partido a la mitad de una muestra
+      for (;;) {
+        const { value, done } = await lector.read();
+        if (done) throw new Error("Se cortó el audio del robot");
+        let datos = value;
+        if (resto) { datos = new Uint8Array(resto.length + value.length); datos.set(resto); datos.set(value, resto.length); resto = null; }
+        if (datos.length & 1) { resto = datos.slice(-1); datos = datos.subarray(0, datos.length - 1); }
+        reproducirBloque(datos, tasa);
+      }
+    } catch (err) {
+      if (audio.ctx !== ctxActual) return;  // el usuario lo detuvo
+      detenerAudio();
+      Robot.aviso(err.message || "Error de audio", "error");
+    }
+  }
+
+  btnAudio.addEventListener("click", () => { if (audio.ctx) detenerAudio(); else iniciarAudio(); });
+
   // ------------------------------------------------------------ Control y telemetría
   crearPanelJoystick($("panel-joystick"));
 

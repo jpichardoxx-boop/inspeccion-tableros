@@ -9,7 +9,7 @@
   const campos = () => form.querySelectorAll("[data-clave]");
   const NOMBRES_COMP = {
     motores: "Motores (L298N)", encoders: "Encoders", camara_termica: "Cámara térmica MLX90640",
-    camara_visible: "Cámara visible (webcam USB)", sensores_ambiente: "Sensores TechRoach", control_xbox: "Control Xbox (Pi)",
+    camara_visible: "Cámara visible (webcam USB)", sensores_ambiente: "Sensores TechRoach", audio: "Micrófono (audio)", control_xbox: "Control Xbox (Pi)",
   };
   let paletas = {};
 

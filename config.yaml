@@ -141,6 +141,15 @@ camara_visible:
   espejo_horizontal: true        # La webcam del robot se ve al revés
   espejo_vertical: false
 
+# -----------------------------------------------------------------------------
+#  Audio: micrófono de la webcam, se escucha en "En vivo" (botón Escuchar).
+#  Solo se abre mientras alguien escucha. Ver micrófonos: arecord -l
+# -----------------------------------------------------------------------------
+audio:
+  habilitado: true
+  dispositivo: "auto"            # auto = micrófono de la webcam USB; o p. ej. "plughw:1,0"
+  tasa_hz: 16000                 # 16 kHz mono ≈ 32 KB/s por oyente
+
 # Alineación del térmico sobre el visible (fracción del cuadro visible que
 # cubre el térmico) = FOV térmico / FOV webcam. Webcam típica de 60°x45°:
 # 55/60 ≈ 0.92 y 35/45 ≈ 0.78. Ajustar según la webcam (valores > 1 si la

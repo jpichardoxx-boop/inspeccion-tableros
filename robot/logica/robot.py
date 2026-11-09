@@ -35,6 +35,7 @@ from ..config import Configuracion, modo_simulacion
 from ..datos.db import BaseDatos
 from ..datos.reporte_pdf import generar_reporte
 from ..drivers.control_xbox import ControlXboxEvdev
+from ..drivers.audio import TransmisorAudio, crear_audio
 from ..drivers.camara_visible import orientar_cuadro
 from ..drivers.esp32_uart import Esp32Uart
 from ..drivers.fabrica import crear_drivers, cuentas_por_vuelta
@@ -112,6 +113,9 @@ class Robot:
         self._bloqueo_jpeg = threading.Lock()
         self.espectadores_video = 0
         self._ultimo_pedido_video = 0.0
+
+        # Audio del micrófono de la webcam (solo se abre mientras alguien escucha)
+        self.audio = TransmisorAudio(crear_audio(cfg.seccion("audio"), self.simulacion))
 
         # Sensores ambientales de TechRoach
         self.procesador = ProcesadorAmbiente(self._cfg_sensores(), cfg.seccion("respuestas"))
@@ -191,6 +195,7 @@ class Robot:
             self.xbox.detener()
         if self.esp32:
             self.esp32.detener()
+        self.audio.cerrar()
         self.drivers.cerrar()
         log.info("Robot cerrado")
 
@@ -362,6 +367,7 @@ class Robot:
                 "motores": d.motores.estado(), "encoders": d.encoders.estado(),
                 "camara_termica": d.termica.estado(), "camara_visible": d.visible.estado(),
                 "sensores_ambiente": d.ambiente.estado(),
+                "audio": self.audio.fuente.estado(),
                 "control_xbox": {"nombre": "Control Xbox en la Pi (evdev)",
                                  "disponible": bool(self.xbox and self.xbox.conectado),
                                  "detalle": (self.xbox.nombre or self.xbox.error or "Esperando control…")

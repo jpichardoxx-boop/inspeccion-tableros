@@ -45,7 +45,7 @@ apt-get update
 apt-get install -y --no-install-recommends \
     python3 python3-venv python3-pip python3-dev \
     python3-numpy python3-opencv python3-picamera2 python3-libcamera \
-    python3-smbus i2c-tools python3-evdev v4l-utils bluez \
+    python3-smbus i2c-tools python3-evdev v4l-utils alsa-utils bluez \
     fonts-dejavu-core avahi-daemon git build-essential wget unzip
 # Herramientas de cámara (el nombre del paquete cambió entre versiones)
 apt-get install -y --no-install-recommends rpicam-apps-lite 2>/dev/null \
@@ -114,7 +114,7 @@ agregar_boot "camera_auto_detect=1"
 modprobe i2c-dev || true
 grep -q "^i2c-dev" /etc/modules || echo "i2c-dev" >> /etc/modules
 # input: control Xbox (evdev) · video: webcam USB · i2c: MLX90640 y ADS1115
-usermod -aG i2c,gpio,video,dialout,input,bluetooth "$USUARIO" || true
+usermod -aG i2c,gpio,video,audio,dialout,input,bluetooth "$USUARIO" || true
 
 # -----------------------------------------------------------------------------
 paso "4/7 Creando entorno virtual de Python e instalando dependencias"

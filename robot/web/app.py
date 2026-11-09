@@ -13,6 +13,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
+import queue
 import time
 from pathlib import Path
 
@@ -94,6 +95,32 @@ def crear_app(robot: Robot) -> tuple[Flask, SocketIO]:
         return Response(stream_with_context(generar()),
                         mimetype="multipart/x-mixed-replace; boundary=cuadro",
                         headers={"Cache-Control": "no-cache, no-store", "X-Accel-Buffering": "no"})
+
+    # ------------------------------------------------------------- audio (PCM)
+    @app.route("/audio.pcm")
+    def audio():
+        """Audio de la webcam: PCM S16_LE mono sin cabecera (lo reproduce en_vivo.js)."""
+        transmisor = robot.audio
+        if not transmisor.disponible:
+            return jsonify({"ok": False, "error": transmisor.fuente.detalle or "Audio no disponible"}), 503
+        cola = transmisor.suscribir()
+
+        def generar():
+            try:
+                while True:
+                    try:
+                        bloque = cola.get(timeout=3)
+                    except queue.Empty:
+                        return
+                    if bloque is None:
+                        return
+                    yield bloque
+            finally:
+                transmisor.desuscribir(cola)
+
+        return Response(stream_with_context(generar()), mimetype="application/octet-stream",
+                        headers={"Cache-Control": "no-cache, no-store", "X-Accel-Buffering": "no",
+                                 "X-Audio-Tasa": str(transmisor.fuente.tasa_hz)})
 
     @app.route("/foto.jpg")
     def foto():
