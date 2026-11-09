@@ -8,6 +8,7 @@ flask-socketio>=5.3,<6
 simple-websocket>=1.0
 pigpio>=1.78
 adafruit-blinka>=8.0
+gpiod>=2.2.2,<3     # Blinka la exige en Bookworm/Trixie; sin ella pregunta al arrancar
 adafruit-circuitpython-mlx90640>=1.3
 reportlab>=4.0
 pyyaml>=6.0
