@@ -8,7 +8,9 @@
   </div>
 </div>
 
-<form id="form-config" class="config-rejilla" autocomplete="off">
+<!-- novalidate: el servidor valida rangos y reglas (robot/config.py) y explica el error;
+     así el navegador no bloquea valores correctos que no caen en el "step" -->
+<form id="form-config" class="config-rejilla" autocomplete="off" novalidate>
   <!-- Movimiento y seguridad -->
   <article class="panel">
     <header class="panel-cab"><h2>Movimiento y seguridad</h2></header>
@@ -68,9 +70,9 @@
 
       <div class="etiqueta" style="margin:4px 0 6px">Umbrales ΔT (ANSI/NETA MTS)</div>
       <div class="fila">
-        <div class="campo"><label for="u1"><span class="punto" style="--c:#f1c40f"></span>Posible (≥ °C)</label><input type="number" id="u1" data-clave="analisis.umbral_posible_c" min="0.1" max="100" step="0.5"></div>
-        <div class="campo"><label for="u2"><span class="punto" style="--c:#e67e22"></span>Reparar (≥ °C)</label><input type="number" id="u2" data-clave="analisis.umbral_reparar_c" min="0.1" max="100" step="0.5"></div>
-        <div class="campo"><label for="u3"><span class="punto" style="--c:#e74c3c"></span>Inmediata (&gt; °C)</label><input type="number" id="u3" data-clave="analisis.umbral_inmediata_c" min="0.1" max="200" step="0.5"></div>
+        <div class="campo"><label for="u1"><span class="punto" style="--c:#f1c40f"></span>Posible (≥ °C)</label><input type="number" id="u1" data-clave="analisis.umbral_posible_c" min="0" max="100" step="0.5"></div>
+        <div class="campo"><label for="u2"><span class="punto" style="--c:#e67e22"></span>Reparar (≥ °C)</label><input type="number" id="u2" data-clave="analisis.umbral_reparar_c" min="0" max="100" step="0.5"></div>
+        <div class="campo"><label for="u3"><span class="punto" style="--c:#e74c3c"></span>Inmediata (&gt; °C)</label><input type="number" id="u3" data-clave="analisis.umbral_inmediata_c" min="0" max="200" step="0.5"></div>
       </div>
       <div class="fila">
         <div class="campo">
@@ -126,15 +128,15 @@
     <div class="panel-cuerpo">
       <div class="etiqueta" style="margin-bottom:6px">MQ-2 · gases inflamables (ppm estimadas)</div>
       <div class="fila">
-        <div class="campo"><label for="mq2a">Advertencia</label><input type="number" id="mq2a" data-clave="sensores.mq2.advertencia_ppm" min="1" step="10"></div>
-        <div class="campo"><label for="mq2b">Alarma (detiene)</label><input type="number" id="mq2b" data-clave="sensores.mq2.alarma_ppm" min="1" step="10"></div>
-        <div class="campo"><label for="mq2r">R0 (kΩ)</label><input type="number" id="mq2r" data-clave="sensores.mq2.r0_kohm" min="0.01" step="0.01"></div>
+        <div class="campo"><label for="mq2a">Advertencia</label><input type="number" id="mq2a" data-clave="sensores.mq2.advertencia_ppm" min="0" step="10"></div>
+        <div class="campo"><label for="mq2b">Alarma (detiene)</label><input type="number" id="mq2b" data-clave="sensores.mq2.alarma_ppm" min="0" step="10"></div>
+        <div class="campo"><label for="mq2r">R0 (kΩ)</label><input type="number" id="mq2r" data-clave="sensores.mq2.r0_kohm" min="0.01" step="any"></div>
       </div>
       <div class="etiqueta" style="margin-bottom:6px">MQ-7 · monóxido de carbono (ppm estimadas)</div>
       <div class="fila">
         <div class="campo"><label for="mq7a">Advertencia</label><input type="number" id="mq7a" data-clave="sensores.mq7.advertencia_ppm" min="1" step="1"></div>
         <div class="campo"><label for="mq7b">Alarma (detiene)</label><input type="number" id="mq7b" data-clave="sensores.mq7.alarma_ppm" min="1" step="1"></div>
-        <div class="campo"><label for="mq7r">R0 (kΩ)</label><input type="number" id="mq7r" data-clave="sensores.mq7.r0_kohm" min="0.01" step="0.01"></div>
+        <div class="campo"><label for="mq7r">R0 (kΩ)</label><input type="number" id="mq7r" data-clave="sensores.mq7.r0_kohm" min="0.01" step="any"></div>
       </div>
       <div class="fila">
         <div class="campo"><label for="calent">Calentamiento (s)</label><input type="number" id="calent" data-clave="sensores.calentamiento_s" min="0" max="3600" step="10"></div>
