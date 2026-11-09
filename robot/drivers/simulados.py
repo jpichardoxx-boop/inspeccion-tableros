@@ -171,6 +171,17 @@ class EscenaTablero:
         cv2.putText(img, "TABLERO TD-01   220/127 V  3F-4H", (435, 128),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.62, (235, 235, 235), 1, cv2.LINE_AA)
 
+        # Etiqueta QR del tablero (se lee en la página Captura)
+        try:
+            from ..logica.qr import generar_qr_png
+            qr = cv2.imdecode(np.frombuffer(generar_qr_png("TD-01|Laboratorio de potencia", 4),
+                                            np.uint8), cv2.IMREAD_COLOR)
+            qr = cv2.resize(qr, (156, 156), interpolation=cv2.INTER_NEAREST)
+            img[418:574, 290:446] = qr
+            cv2.rectangle(img, (289, 417), (446, 574), (120, 120, 120), 1)
+        except Exception:  # pragma: no cover - OpenCV sin QRCodeEncoder
+            pass
+
         # Señal de advertencia
         pts = np.array([[960, 100], [995, 160], [925, 160]], np.int32)
         cv2.fillPoly(img, [pts], (0, 200, 255))

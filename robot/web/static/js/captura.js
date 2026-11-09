@@ -164,4 +164,67 @@
   }
 
   crearPanelJoystick($("panel-joystick"));
+
+  // ------------------------------------------------------------ Lector de códigos QR
+  // Cada ~1.2 s se pregunta al robot si la webcam ve la etiqueta QR de un
+  // tablero. Al leer uno nuevo se llenan "tablero" y "ubicación".
+  const cvQR = $("cv-qr");
+  const ctxQR = cvQR.getContext("2d");
+  let ultimoQR = null;
+  let consultando = false;
+
+  function dibujarQR(qr) {
+    const w = cvQR.clientWidth, h = cvQR.clientHeight;
+    if (cvQR.width !== w || cvQR.height !== h) { cvQR.width = w; cvQR.height = h; }
+    ctxQR.clearRect(0, 0, w, h);
+    if (!qr || !qr.puntos || qr.puntos.length < 4) return;
+    ctxQR.strokeStyle = "#2ecc71"; ctxQR.lineWidth = 3; ctxQR.lineJoin = "round";
+    ctxQR.beginPath();
+    qr.puntos.forEach(([x, y], i) => (i ? ctxQR.lineTo(x * w, y * h) : ctxQR.moveTo(x * w, y * h)));
+    ctxQR.closePath(); ctxQR.stroke();
+    const [x0, y0] = qr.puntos[0];
+    ctxQR.font = "600 13px system-ui, sans-serif";
+    const etiqueta = `QR ${qr.codigo}`;
+    const ancho = ctxQR.measureText(etiqueta).width + 10;
+    ctxQR.fillStyle = "#2ecc71"; ctxQR.fillRect(x0 * w, Math.max(0, y0 * h - 22), ancho, 20);
+    ctxQR.fillStyle = "#06120a"; ctxQR.fillText(etiqueta, x0 * w + 5, Math.max(14, y0 * h - 7));
+  }
+
+  function estadoLector(estado, texto) {
+    $("lector-qr").dataset.estado = estado;
+    $("texto-qr").textContent = texto;
+  }
+
+  function destellar(el) { el.classList.remove("destello"); void el.offsetWidth; el.classList.add("destello"); }
+
+  async function consultarQR() {
+    if (consultando || document.hidden || !$("chk-qr").checked) return;
+    consultando = true;
+    try {
+      const { qr } = await Robot.api("/api/qr");
+      dibujarQR(qr);
+      if (!qr) {
+        if (!ultimoQR) estadoLector("buscando", "Lector QR: apunta la webcam a la etiqueta del tablero");
+        return;
+      }
+      if (qr.texto !== ultimoQR) {
+        ultimoQR = qr.texto;
+        $("tablero").value = qr.codigo;
+        destellar($("tablero"));
+        if (qr.ubicacion) { $("ubicacion").value = qr.ubicacion; destellar($("ubicacion")); }
+        Robot.aviso(`Tablero ${qr.codigo} identificado por código QR.`, "ok");
+      }
+      estadoLector("leido", `QR leído: ${qr.codigo}${qr.ubicacion ? " · " + qr.ubicacion : ""}`);
+    } catch (_) {
+      /* sin conexión: se reintenta en el siguiente ciclo */
+    } finally {
+      consultando = false;
+    }
+  }
+  $("chk-qr").addEventListener("change", (e) => {
+    if (e.target.checked) { ultimoQR = null; estadoLector("buscando", "Lector QR: apunta la webcam a la etiqueta del tablero"); consultarQR(); }
+    else { dibujarQR(null); estadoLector("apagado", "Lector QR apagado: escribe el tablero a mano"); }
+  });
+  setInterval(consultarQR, 1200);
+  consultarQR();
 })();

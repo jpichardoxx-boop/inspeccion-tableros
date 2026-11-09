@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block titulo %}Etiquetas QR{% endblock %}
+{% block contenido %}
+<div class="encabezado-pagina no-imprimir">
+  <div>
+    <h1>Etiquetas QR de tableros</h1>
+    <p>Imprime una etiqueta por tablero y pégala en un lugar visible para la webcam (puerta o placa). En <a href="/captura">Captura</a> el robot la lee y llena el tablero solo.</p>
+  </div>
+  <button type="button" class="btn btn-primario" id="btn-imprimir">Imprimir</button>
+</div>
+
+<article class="panel no-imprimir" style="margin-bottom:16px">
+  <header class="panel-cab"><h2>Tableros</h2></header>
+  <div class="panel-cuerpo">
+    <label for="lista">Un tablero por línea: <code>ID | ubicación</code> (la ubicación es opcional)</label>
+    <textarea id="lista" rows="6" style="width:100%;font-family:var(--mono)" placeholder="TD-01 | Laboratorio de potencia&#10;TD-02 | Nave 2, nivel 1"></textarea>
+    <p class="ayuda">Tamaño recomendado: 5 a 6 cm por lado, sin plastificado brillante (el reflejo dificulta la lectura). Se lee bien a 30–60 cm.</p>
+  </div>
+</article>
+
+<div class="etiquetas" id="etiquetas"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+"use strict";
+(() => {
+  const $ = (id) => document.getElementById(id);
+  function lineas() {
+    return $("lista").value.split("\n").map((l) => {
+      const [codigo, ...resto] = l.split("|");
+      return { codigo: (codigo || "").trim(), ubicacion: resto.join("|").trim() };
+    }).filter((t) => t.codigo);
+  }
+  function pintar() {
+    $("etiquetas").innerHTML = lineas().map((t) => {
+      const texto = t.ubicacion ? `${t.codigo}|${t.ubicacion}` : t.codigo;
+      return `<div class="etiqueta-qr"><img alt="QR ${escaparHTML(t.codigo)}" src="/api/qr/etiqueta.png?texto=${encodeURIComponent(texto)}">
+        <b>${escaparHTML(t.codigo)}</b><span>${escaparHTML(t.ubicacion)}</span><small>INSPECCIÓN TERMOGRÁFICA</small></div>`;
+    }).join("") || '<p class="ayuda">Escribe al menos un tablero.</p>';
+  }
+  let espera;
+  $("lista").addEventListener("input", () => { clearTimeout(espera); espera = setTimeout(pintar, 300); });
+  $("btn-imprimir").addEventListener("click", () => window.print());
+  Robot.api("/api/tableros").then((tableros) => {
+    $("lista").value = tableros.length
+      ? tableros.map((t) => t.ubicacion ? `${t.codigo} | ${t.ubicacion}` : t.codigo).join("\n")
+      : "TD-01 | Laboratorio de potencia";
+    pintar();
+  }).catch(() => { $("lista").value = "TD-01 | Laboratorio de potencia"; pintar(); });
+})();
+</script>
+{% endblock %}

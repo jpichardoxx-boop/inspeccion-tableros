@@ -26,6 +26,7 @@ from .. import __version__
 from ..config import ErrorConfiguracion
 from ..logica import paletas
 from ..logica.analisis_termico import CLASIFICACIONES
+from ..logica.qr import generar_qr_png
 from ..logica.robot import Robot
 from .socket_eventos import registrar_eventos
 
@@ -66,6 +67,7 @@ def crear_app(robot: Robot) -> tuple[Flask, SocketIO]:
     app.add_url_rule("/captura", "captura", lambda: _pagina("captura.html", "captura"))
     app.add_url_rule("/ambiente", "ambiente", lambda: _pagina("ambiente.html", "ambiente"))
     app.add_url_rule("/gemelo", "gemelo", lambda: _pagina("gemelo.html", "gemelo"))
+    app.add_url_rule("/etiquetas-qr", "etiquetas_qr", lambda: _pagina("etiquetas_qr.html", "captura"))
     app.add_url_rule("/historial", "historial", lambda: _pagina("historial.html", "historial"))
     app.add_url_rule("/reporte", "reporte", lambda: _pagina("reporte.html", "reporte"))
     app.add_url_rule("/configuracion", "configuracion",
@@ -198,6 +200,22 @@ def crear_app(robot: Robot) -> tuple[Flask, SocketIO]:
         if logo and Path(logo).is_file():
             return send_file(Path(logo), max_age=0)
         return send_from_directory(app.static_folder, "img/logo.png")
+
+    # ------------------------------------------------------------- API: códigos QR
+    @app.get("/api/qr")
+    def api_qr():
+        """Lee el QR de la etiqueta del tablero que está viendo la webcam."""
+        return jsonify({"qr": robot.leer_qr(), "camara": robot.drivers.visible.disponible})
+
+    @app.get("/api/qr/etiqueta.png")
+    def api_qr_etiqueta():
+        try:
+            png = generar_qr_png(request.args.get("texto", ""))
+        except ValueError as e:
+            return jsonify({"ok": False, "error": str(e)}), 400
+        except RuntimeError as e:
+            return jsonify({"ok": False, "error": str(e)}), 501
+        return Response(png, mimetype="image/png", headers={"Cache-Control": "max-age=86400"})
 
     # ------------------------------------------------------------- API: gemelo digital
     @app.get("/api/gemelo")

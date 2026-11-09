@@ -42,6 +42,7 @@ from ..drivers.esp32_uart import Esp32Uart
 from ..drivers.fabrica import crear_drivers, cuentas_por_vuelta
 from ..drivers.sistema import MonitorSistema
 from . import imagen_termica as imagen
+from .qr import leer_qr
 from .ambiente import ALARMA, ProcesadorAmbiente, r0_desde_rs, rs_desde_voltaje
 from .analisis_termico import (Umbrales, analizar, corregir_emisividad, estadisticas,
                                validar_matriz)
@@ -117,7 +118,9 @@ class Robot:
 
         # Las posiciones de odometría solo son comparables desde el último origen
         self.inicio_odometria = datetime.now().isoformat(timespec="seconds")
-        self.ruta: deque = deque(maxlen=5000)   # puntos (x, y) cada 2 cm desde el origen
+        self.ruta: deque = deque(maxlen=5000)
+        self._bloqueo_qr = threading.Lock()
+        self._qr_cache: tuple[float, dict | None] = (0.0, None)   # puntos (x, y) cada 2 cm desde el origen
 
         # Audio del micrófono de la webcam (solo se abre mientras alguien escucha)
         self.audio = TransmisorAudio(crear_audio(cfg.seccion("audio"), self.simulacion))
@@ -353,6 +356,16 @@ class Robot:
         self.ruta.clear()
         self.inicio_odometria = datetime.now().isoformat(timespec="seconds")
         self.registrar_evento("odometria", "info", "Origen del mapa reiniciado")
+
+    def leer_qr(self) -> dict | None:
+        """Busca un QR en el cuadro actual de la webcam (resultado compartido ~0.5 s)."""
+        with self._bloqueo_qr:
+            ahora = time.monotonic()
+            if ahora - self._qr_cache[0] < 0.5:
+                return self._qr_cache[1]
+            resultado = leer_qr(self.cuadro_visible())
+            self._qr_cache = (time.monotonic(), resultado)
+            return resultado
 
     def hallazgos_en_mapa(self) -> list[dict]:
         """Inspecciones con posición, capturadas desde el origen actual del mapa."""

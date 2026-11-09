@@ -34,7 +34,7 @@
     <div class="rejilla rejilla-2">
       <article class="panel">
         <header class="panel-cab"><h2>Cámara visible</h2></header>
-        <div class="marco"><img id="video" src="/video.mjpg" alt="Video de la cámara visible"></div>
+        <div class="marco"><img id="video" src="/video.mjpg" alt="Video de la cámara visible"><canvas class="capa-qr" id="cv-qr"></canvas></div>
       </article>
       <article class="panel">
         <header class="panel-cab"><h2>Posicionamiento</h2></header>
@@ -60,6 +60,12 @@
         <label for="tablero">Nombre / ID del tablero *</label>
         <input type="text" id="tablero" list="lista-tableros" placeholder="p. ej. TD-01 Laboratorio de Potencia" required maxlength="80">
         <datalist id="lista-tableros"></datalist>
+        <div class="lector-qr" id="lector-qr" data-estado="buscando">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6"/><path d="M8 8h3v3H8zM13 13h3v3h-3zM13 8h3M8 13v3h3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+          <span id="texto-qr">Lector QR: apunta la webcam a la etiqueta del tablero</span>
+          <label class="interruptor der" title="Llena el tablero automáticamente al leer un QR"><input type="checkbox" id="chk-qr" checked><span class="pista"></span>Auto</label>
+        </div>
+        <a class="ayuda" href="/etiquetas-qr">Imprimir etiquetas QR para los tableros</a>
       </div>
       <div class="campo">
         <label for="ubicacion">Ubicación</label>
