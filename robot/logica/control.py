@@ -121,6 +121,11 @@ class ControladorTraccion:
         self.referencia = [0.0, 0.0]     # m/s tras la rampa
         self.medida = [0.0, 0.0]         # m/s medido por encoders
         self.duty = [0.0, 0.0]
+        # Odometría (dead reckoning con encoders): x, y en m, rumbo en rad.
+        # recorrido = metros acumulados por cada oruga (anima las orugas en 3D)
+        self.pose = [0.0, 0.0, 0.0]
+        self.recorrido = [0.0, 0.0]
+        self.distancia_total = 0.0
         self._pi = [ControlPI(parametros.kp, parametros.ki), ControlPI(parametros.kp, parametros.ki)]
         self._conteos_prev = self.encoders.leer_conteos()
         self._t_prev = reloj()
@@ -232,10 +237,12 @@ class ControladorTraccion:
             # 1) Velocidad medida por encoders (m/s), con filtro exponencial
             conteos = self.encoders.leer_conteos()
             metros_por_cuenta = math.pi * self.p.diametro_rueda / self.cpr
+            avance = [(conteos[i] - self._conteos_prev[i]) * metros_por_cuenta for i in (0, 1)]
             for i in (0, 1):
-                v = (conteos[i] - self._conteos_prev[i]) * metros_por_cuenta / dt
+                v = avance[i] / dt
                 self.medida[i] += 0.5 * (v - self.medida[i])
             self._conteos_prev = conteos
+            self._integrar_odometria(avance[0], avance[1])
 
             if self.paro_emergencia_activo:
                 if any(self.duty):
@@ -278,6 +285,33 @@ class ControladorTraccion:
             self.encoders.indicar_sentido(int(math.copysign(1, duty[0])) if duty[0] else 0,
                                           int(math.copysign(1, duty[1])) if duty[1] else 0)
             self.motores.aplicar(duty[0], duty[1])
+
+    def _integrar_odometria(self, d_izq: float, d_der: float) -> None:
+        """Modelo diferencial (skid steering): integra el avance de cada oruga."""
+        if not (math.isfinite(d_izq) and math.isfinite(d_der)):
+            return
+        d_centro = (d_izq + d_der) / 2.0
+        d_rumbo = (d_der - d_izq) / max(1e-3, self.p.separacion_orugas)
+        x, y, th = self.pose
+        medio = th + d_rumbo / 2.0
+        th = math.atan2(math.sin(th + d_rumbo), math.cos(th + d_rumbo))
+        self.pose = [x + d_centro * math.cos(medio), y + d_centro * math.sin(medio), th]
+        self.recorrido[0] += d_izq
+        self.recorrido[1] += d_der
+        self.distancia_total += abs(d_centro)
+
+    def reiniciar_odometria(self) -> None:
+        with self._bloqueo:
+            self.pose = [0.0, 0.0, 0.0]
+            self.distancia_total = 0.0
+
+    def odometria(self) -> dict:
+        with self._bloqueo:
+            x, y, th = self.pose
+            return {"x": round(x, 4), "y": round(y, 4), "rumbo": round(th, 4),
+                    "rec_izq": round(self.recorrido[0], 4), "rec_der": round(self.recorrido[1], 4),
+                    "v_izq": round(self.medida[0], 3), "v_der": round(self.medida[1], 3),
+                    "distancia": round(self.distancia_total, 3)}
 
     def _bucle(self) -> None:
         siguiente = time.monotonic()

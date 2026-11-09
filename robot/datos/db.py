@@ -74,13 +74,17 @@ COLUMNAS_AMBIENTE = {
     "humedad": "REAL",
     "mq2_ppm": "REAL",
     "mq7_ppm": "REAL",
+    # Posición del robot (odometría) al capturar: mapa del gemelo digital
+    "pos_x": "REAL",
+    "pos_y": "REAL",
+    "rumbo": "REAL",
 }
 
 _CAMPOS_LISTA = """i.id, i.fecha, i.t_max, i.t_min, i.t_media, i.t_referencia, i.modo_referencia,
     i.delta_t, i.nivel, i.clasificacion, i.emisividad, i.pos_max_fila, i.pos_max_col,
     i.ref_fila, i.ref_col, i.notas, i.img_visible, i.img_termica, i.img_fusion,
     i.img_miniatura, i.img_mini_termica, i.simulacion, i.t_ambiente, i.humedad, i.mq2_ppm,
-    i.mq7_ppm, t.codigo AS tablero, t.ubicacion"""
+    i.mq7_ppm, i.pos_x, i.pos_y, i.rumbo, t.codigo AS tablero, t.ubicacion"""
 
 
 class BaseDatos:
@@ -135,9 +139,10 @@ class BaseDatos:
     def insertar_inspeccion(self, tablero: str, analisis: dict, matriz: np.ndarray,
                             emisividad: float, notas: str = "", ubicacion: str = "",
                             simulacion: bool = False, fecha: str | None = None,
-                            ambiente: dict | None = None) -> int:
+                            ambiente: dict | None = None, pose: dict | None = None) -> int:
         tablero_id = self.obtener_o_crear_tablero(tablero, ubicacion)
         amb = ambiente or {}
+        pos = pose or {}
         ref = analisis.get("punto_referencia") or [None, None]
         clasif = analisis["clasificacion"]
         with self._bloqueo_escritura, self._conectar() as con:
@@ -145,14 +150,15 @@ class BaseDatos:
                 INSERT INTO inspecciones (tablero_id, fecha, t_max, t_min, t_media, t_referencia,
                     modo_referencia, delta_t, nivel, clasificacion, emisividad, pos_max_fila,
                     pos_max_col, ref_fila, ref_col, notas, matriz, simulacion,
-                    t_ambiente, humedad, mq2_ppm, mq7_ppm)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", (
+                    t_ambiente, humedad, mq2_ppm, mq7_ppm, pos_x, pos_y, rumbo)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", (
                 tablero_id, fecha or datetime.now().isoformat(timespec="seconds"),
                 analisis["t_max"], analisis["t_min"], analisis["t_media"], analisis["t_referencia"],
                 analisis["modo_referencia"], analisis["delta_t"], clasif["nivel"], clasif["etiqueta"],
                 emisividad, analisis["pos_max"][0], analisis["pos_max"][1], ref[0], ref[1],
                 notas.strip(), np.asarray(matriz, np.float32).tobytes(), int(simulacion),
-                amb.get("temperatura"), amb.get("humedad"), amb.get("mq2_ppm"), amb.get("mq7_ppm")))
+                amb.get("temperatura"), amb.get("humedad"), amb.get("mq2_ppm"), amb.get("mq7_ppm"),
+                pos.get("x"), pos.get("y"), pos.get("rumbo")))
             return int(cur.lastrowid)
 
     def actualizar_imagenes(self, id_insp: int, **rutas: str) -> None:

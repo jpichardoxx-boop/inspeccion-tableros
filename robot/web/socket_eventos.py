@@ -16,6 +16,7 @@ Servidor → navegador
     ``config``     configuración actualizada.
     ``ambiente_evento``  alarmas y eventos de los sensores de TechRoach.
     ``aviso``      mensajes informativos (p. ej. captura rápida).
+    ``odometria``  pose x, y, rumbo y recorrido de cada oruga (10 Hz, gemelo digital).
 
 Seguridad ante desconexión: si se desconecta el navegador que estaba
 manejando el robot (el "piloto"), los motores se detienen de inmediato. El
@@ -44,7 +45,7 @@ def registrar_eventos(socketio: SocketIO, robot) -> None:
     robot.suscribir("termico", lambda datos: socketio.emit("termico", datos))
     robot.suscribir("estado", lambda datos: socketio.emit("estado", datos))
     robot.suscribir("seguridad", lambda datos: socketio.emit("seguridad", datos))
-    for evento in ("ambiente_evento", "config", "nueva_inspeccion", "aviso"):
+    for evento in ("ambiente_evento", "config", "nueva_inspeccion", "aviso", "odometria"):
         robot.suscribir(evento, lambda datos, ev=evento: socketio.emit(ev, datos))
 
     @socketio.on("connect")

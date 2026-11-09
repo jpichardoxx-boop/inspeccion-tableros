@@ -21,6 +21,7 @@ por Socket.IO.
 from __future__ import annotations
 
 import logging
+import math
 import threading
 import time
 from collections import defaultdict, deque
@@ -114,6 +115,10 @@ class Robot:
         self.espectadores_video = 0
         self._ultimo_pedido_video = 0.0
 
+        # Las posiciones de odometría solo son comparables desde el último origen
+        self.inicio_odometria = datetime.now().isoformat(timespec="seconds")
+        self.ruta: deque = deque(maxlen=5000)   # puntos (x, y) cada 2 cm desde el origen
+
         # Audio del micrófono de la webcam (solo se abre mientras alguien escucha)
         self.audio = TransmisorAudio(crear_audio(cfg.seccion("audio"), self.simulacion))
 
@@ -166,7 +171,8 @@ class Robot:
         for nombre, objetivo in (("camara-termica", self._bucle_termico),
                                  ("camara-visible", self._bucle_visible),
                                  ("sensores", self._bucle_sensores),
-                                 ("estado", self._bucle_estado)):
+                                 ("estado", self._bucle_estado),
+                                 ("odometria", self._bucle_odometria)):
             hilo = threading.Thread(target=objetivo, name=nombre, daemon=True)
             hilo.start()
             self._hilos.append(hilo)
@@ -329,6 +335,29 @@ class Robot:
                 self.esp32.enviar({"t": "estado", "paro": estado["paro_emergencia"],
                                    "v_izq": estado["v_izq"], "v_der": estado["v_der"]})
             time.sleep(0.5)
+
+    def _bucle_odometria(self) -> None:
+        """Pose del robot a 10 Hz para el gemelo digital (solo con navegadores conectados)."""
+        while self._activo.is_set():
+            o = self.control.odometria()
+            u = self.ruta[-1] if self.ruta else None
+            if u is None or math.hypot(o["x"] - u[0], o["y"] - u[1]) >= 0.02:
+                self.ruta.append((round(o["x"], 3), round(o["y"], 3)))
+            if self.clientes > 0:
+                self._publicar("odometria", {**o, "paro": self.control.paro_emergencia_activo})
+            time.sleep(0.1)
+
+    def reiniciar_odometria(self) -> None:
+        """Pone el origen del mapa en la posición actual del robot."""
+        self.control.reiniciar_odometria()
+        self.ruta.clear()
+        self.inicio_odometria = datetime.now().isoformat(timespec="seconds")
+        self.registrar_evento("odometria", "info", "Origen del mapa reiniciado")
+
+    def hallazgos_en_mapa(self) -> list[dict]:
+        """Inspecciones con posición, capturadas desde el origen actual del mapa."""
+        return [i for i in self.db.listar_inspecciones(desde=self.inicio_odometria, limite=300)
+                if i.get("pos_x") is not None]
 
     def _leer_bateria(self) -> float | None:
         # 1) ADS1115 (canal A3)  2) ESP32 opcional
@@ -587,7 +616,8 @@ class Robot:
 
         emisividad = float(self.cfg.get("camara_termica.emisividad", 0.95))
         id_insp = self.db.insertar_inspeccion(tablero, analisis, matriz, emisividad, notas,
-                                              ubicacion, self.simulacion, ambiente=self.ambiente)
+                                              ubicacion, self.simulacion, ambiente=self.ambiente,
+                                              pose=self.control.odometria())
         self.ultimo_tablero, self.ultima_ubicacion = tablero, ubicacion
         paleta = self.cfg.get("interfaz.paleta", "ironbow")
         base = f"INS-{id_insp:05d}"

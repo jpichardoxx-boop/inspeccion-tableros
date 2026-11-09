@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block titulo %}Gemelo digital{% endblock %}
+{% block contenido %}
+<div class="encabezado-pagina">
+  <div>
+    <h1>Gemelo digital</h1>
+    <p>Modelo 3D del robot que se mueve con la odometría real de los encoders. El mapa marca la ruta y dónde se capturó cada hallazgo.</p>
+  </div>
+  <button type="button" class="btn" id="btn-origen" title="Toma la posición actual del robot como (0, 0)">Reiniciar origen</button>
+</div>
+
+<section class="rejilla rejilla-gemelo">
+  <article class="panel">
+    <header class="panel-cab">
+      <h2>Modelo 3D</h2>
+      <span class="indicador-vivo">EN VIVO</span>
+      <div class="der">
+        <label class="interruptor" title="La cámara sigue al robot"><input type="checkbox" id="chk-seguir" checked><span class="pista"></span>Seguir robot</label>
+        <button type="button" class="btn btn-chico" id="btn-vista">Centrar vista</button>
+      </div>
+    </header>
+    <div class="marco-3d" id="marco-3d">
+      <span class="esquina-3d" id="aviso-3d" hidden></span>
+    </div>
+  </article>
+
+  <article class="panel">
+    <header class="panel-cab">
+      <h2>Mapa de recorrido</h2>
+      <span class="etiqueta" id="escala-mapa">—</span>
+    </header>
+    <div class="marco-mapa"><canvas id="cv-mapa"></canvas></div>
+    <div class="lecturas lecturas-gemelo">
+      <div class="lectura"><span>X</span><b id="o-x">—</b></div>
+      <div class="lectura"><span>Y</span><b id="o-y">—</b></div>
+      <div class="lectura"><span>Rumbo</span><b id="o-rumbo">—</b></div>
+      <div class="lectura"><span>Recorrido</span><b id="o-dist">—</b></div>
+    </div>
+  </article>
+</section>
+
+<section class="rejilla rejilla-control">
+  <article class="panel">
+    <header class="panel-cab"><h2>Control manual</h2></header>
+    <div class="panel-cuerpo" id="panel-joystick"></div>
+  </article>
+
+  <article class="panel">
+    <header class="panel-cab"><h2>Hallazgos en el mapa</h2><span class="der etiqueta" id="cuenta-hallazgos"></span></header>
+    <div class="tabla-envoltura">
+      <table class="tabla">
+        <thead><tr><th>Folio</th><th>Tablero</th><th>ΔT</th><th>Clasificación</th><th>Posición</th></tr></thead>
+        <tbody id="tabla-hallazgos"></tbody>
+      </table>
+    </div>
+    <p class="ayuda panel-cuerpo" style="margin:0">La posición se estima con los encoders (odometría): es precisa en tramos cortos y acumula error con los giros. Usa <b>Reiniciar origen</b> al empezar cada recorrido de inspección.</p>
+  </article>
+</section>
+{% endblock %}
+{% block scripts %}
+<script type="importmap">
+{ "imports": { "three": "{{ url_for('static', filename='vendor/three/three.module.min.js') }}" } }
+</script>
+<script src="{{ url_for('static', filename='js/joystick.js') }}?v={{ version }}"></script>
+<script type="module" src="{{ url_for('static', filename='js/gemelo.js') }}?v={{ version }}"></script>
+{% endblock %}

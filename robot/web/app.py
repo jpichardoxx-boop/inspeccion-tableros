@@ -36,6 +36,7 @@ PAGINAS = [
     ("en_vivo", "/", "Inspección en vivo", "En vivo", "visor"),
     ("captura", "/captura", "Captura", "Captura", "camara"),
     ("ambiente", "/ambiente", "Ambiente", "Ambiente", "gas"),
+    ("gemelo", "/gemelo", "Gemelo digital", "Gemelo", "cubo"),
     ("historial", "/historial", "Historial", "Historial", "lista"),
     ("reporte", "/reporte", "Reporte", "Reporte", "documento"),
     ("configuracion", "/configuracion", "Configuración", "Ajustes", "engrane"),
@@ -64,6 +65,7 @@ def crear_app(robot: Robot) -> tuple[Flask, SocketIO]:
     app.add_url_rule("/", "en_vivo", lambda: _pagina("en_vivo.html", "en_vivo"))
     app.add_url_rule("/captura", "captura", lambda: _pagina("captura.html", "captura"))
     app.add_url_rule("/ambiente", "ambiente", lambda: _pagina("ambiente.html", "ambiente"))
+    app.add_url_rule("/gemelo", "gemelo", lambda: _pagina("gemelo.html", "gemelo"))
     app.add_url_rule("/historial", "historial", lambda: _pagina("historial.html", "historial"))
     app.add_url_rule("/reporte", "reporte", lambda: _pagina("reporte.html", "reporte"))
     app.add_url_rule("/configuracion", "configuracion",
@@ -196,6 +198,18 @@ def crear_app(robot: Robot) -> tuple[Flask, SocketIO]:
         if logo and Path(logo).is_file():
             return send_file(Path(logo), max_age=0)
         return send_from_directory(app.static_folder, "img/logo.png")
+
+    # ------------------------------------------------------------- API: gemelo digital
+    @app.get("/api/gemelo")
+    def api_gemelo():
+        return jsonify({"odometria": robot.control.odometria(),
+                        "hallazgos": robot.hallazgos_en_mapa(),
+                        "ruta": list(robot.ruta)})
+
+    @app.post("/api/odometria/reiniciar")
+    def api_odometria_reiniciar():
+        robot.reiniciar_odometria()
+        return jsonify({"ok": True, "odometria": robot.control.odometria()})
 
     # ------------------------------------------------------------- API: captura e historial
     @app.post("/api/capturar")
